@@ -10,6 +10,7 @@
 (defun matmul (a2 a1)
   (destructuring-bind (rs2 cs2) (array-dimensions a2)
     (destructuring-bind (rs1 cs1) (array-dimensions a1)
+      (when (not (= cs2 rs1)) (error "bad array dimensions in multiplication"))
       (let ((new-array (make-array (list rs2 cs1))))
         (dotimes (r2 rs2)
           (dotimes (c1 cs1)
@@ -19,7 +20,8 @@
               (setf (aref new-array r2 c1) sum))))
         new-array))))
 
-
+(defun matmul-flip (a1 a2)
+  (matmul a2 a1))
 
 (defun transpose (a)
   (destructuring-bind (rs cs) (array-dimensions a)
@@ -62,3 +64,6 @@
 
 (defun make-ff-net (layers)
   (mapcar #'(lambda (p) (apply #'random-array p)) (connection-sizes layers)))
+
+(defun run-network (nn i)
+  (reduce #'matmul-flip nn :initial-value i))
