@@ -64,8 +64,18 @@
 (defun make-ff-net (layers)
   (mapcar #'(lambda (p) (apply #'random-array p)) (connection-sizes layers)))
 
+;; okay so this will just calculate the final network but what we want is something that will calculate all the intermmediate terms
 (defun run-network (nn i)
   (reduce #'(lambda (a1 a2) (map-array #'sigmoid (matmul a2 a1))) nn :initial-value i))
+
+(defun run-nn-show-work (nn i)
+  (destructuring-bind (o rs)
+      (reduce #'(lambda (p a)
+                  (destructuring-bind (i imms) p
+                    (let ((r (map-array #'sigmoid (matmul a i))))
+                      (list r (cons (demote-array r) imms))))) nn :initial-value (list i nil))
+    (list o (reverse rs))))
+  
 
 (defun sigmoid (x)
   (/ 1.0 (+ 1.0 (exp (- x)))))
@@ -94,8 +104,18 @@
 (defun dot (v1 v2)
   (reduce #'(lambda (n l) (+ n (* (car l) (cadr l)))) (zip v1 v2) :initial-value 0))
 
+(defun vbinop (op v1 v2)
+  (map (type-of v1) #'(lambda (x y) (funcall op x y)) v1 v2))
+
+(defun v- (v1 v2)
+  (vbinop #'- v1 v2))
+(defun v+ (v1 v2)
+  (vbinop #'+ v1 v2))
+(defun v* (v1 v2)
+  (vbinop #'* v1 v2))
+
 ;; here a neural network is a 
 (defun train (nn input target)
-  (let* ((output (run-network nn input))
-         (err (- target output)))
-    (
+  (let* ((output (demote-array (run-network nn input)))
+         (err (v- target output)))
+    
