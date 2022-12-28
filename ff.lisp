@@ -54,10 +54,9 @@
 (defun random-array (inodes onodes)
   (map-array #'(lambda (x) (random 1.0)) (zeros inodes onodes)))
 
-;; we're going to use the inodes and onodes description in order to try and make it clear how all of this works
-
-(defun zip (l1 l2)
-  (mapcar #'(lambda (x y) (list x y)) l1 l2))
+;; if we really want to make this work correctly we should play with which type-specifier is used and how the ordering is done 
+(defun zip (s1 s2)
+  (map (type-of s1) #'(lambda (x y) (list x y)) s1 s2))
 
 (defun connection-sizes (ls)
   (zip ls (cdr ls)))
@@ -66,4 +65,37 @@
   (mapcar #'(lambda (p) (apply #'random-array p)) (connection-sizes layers)))
 
 (defun run-network (nn i)
-  (reduce #'matmul-flip nn :initial-value i))
+  (reduce #'(lambda (a1 a2) (map-array #'sigmoid (matmul a2 a1))) nn :initial-value i))
+
+(defun sigmoid (x)
+  (/ 1.0 (+ 1.0 (exp (- x)))))
+
+(defun promote-vec (v)
+  (make-array (list 1 (length v)) :initial-contents (list v)))
+
+(defun make-vector (&optional (initsize 10))
+  (make-array initsize :adjustable t :fill-pointer 0))
+
+;; I really want to write a macro for looping through arrays of arbitrary dimension with all their row and column names
+
+(defun demote-array (a)
+  (destructuring-bind (r c) (array-dimensions a)
+    (when (not (or (= r 1) (= c 1))) (error "can't demote 2d array"))
+    (cond ((= 1 r c) (aref a 0 0))
+          ((= r 1) (let ((new-vec (make-vector)))
+                     (dotimes (i c)
+                       (vector-push (aref a 0 i) new-vec))
+                     new-vec))
+          ((= c 1) (let ((new-vec (make-vector)))
+                     (dotimes (i r)
+                       (vector-push (aref a i 0) new-vec))
+                     new-vec)))))
+        
+(defun dot (v1 v2)
+  (reduce #'(lambda (n l) (+ n (* (car l) (cadr l)))) (zip v1 v2) :initial-value 0))
+
+;; here a neural network is a 
+(defun train (nn input target)
+  (let* ((output (run-network nn input))
+         (err (- target output)))
+    (
